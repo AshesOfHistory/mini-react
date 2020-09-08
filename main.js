@@ -1,7 +1,10 @@
 import { createElement, render, Component } from './mini-react'
 class MyComponent extends Component {
   render() {
-    return <div>this is my component</div>
+    return <div>
+      <h1>this is my component</h1>
+      {this.children}
+    </div>
   }
 }
 

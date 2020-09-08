@@ -43,15 +43,22 @@ export function createElement(type, attributes, ...children) {
   } else {
     element = new type;
   }
-  for (const attr in attributes) {
+  for (let attr in attributes) {
     element.setAttribute(attr, attributes[attr])
   }
-  for (const child of children) {
-    if (typeof child === 'string') {
-      child = new TextWrapper(child)
+  let insertChildren = (children) => {
+    for (let child of children) {
+      if (typeof child === 'string') {
+        child = new TextWrapper(child)
+      }
+      if ((typeof child === 'object') && (child instanceof Array)) { // 判断child是否为数组 需要考虑到数组嵌套情况 所以需要递归展开
+        insertChildren(child)
+      } else { // insertChildren的时候无需append
+        element.appendChild(child)
+      }
     }
-    element.appendChild(child)
   }
+  insertChildren(children)
   return element
 }
 
