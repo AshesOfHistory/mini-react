@@ -1,12 +1,18 @@
-for (let i of [1,2,3,45,56]) {
-  console.log(i)
+import { createElement, render, Component } from './mini-react'
+class MyComponent extends Component {
+  render() {
+    return <div>this is my component</div>
+  }
 }
 
-function createElement(tagName, attributes, ...children) {
-  console.log('tagName', tagName, 'attributes', attributes);
-  return document.createElement(tagName)
-}
 
-let a = <div id = 'wrapper' class='wrapper'>
-    <div class='children'>1111</div>
+
+render(
+<MyComponent id = 'wrapper' class='wrapper'>
+  <div class='children'>
+    11
+    <span>1111</span>
   </div>
+  <div class='children'>2222</div>
+  <div class='children'>3333</div>
+</MyComponent>, document.body)
