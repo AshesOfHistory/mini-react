@@ -7,7 +7,11 @@ class ElementWrapper {
     if (name.match(/^on([\s\S]+)$/)) { // \s所有空白 \S所有非空白 结合在一起表示所有字符 ()匹配模式  RegExp.$1表示匹配到的值 支持on*写法,用来绑定事件
       this.root.addEventListener(RegExp.$1.replace(/^[\s\S]/, word => word.toLowerCase()), value) // 有时为驼峰式onClick，RegExp.$1 为Click，需要确保首字母小写，事件大小写敏感
     } else {
-      this.root.setAttribute(name, value)
+      if (name === 'className') {
+        this.root.setAttribute('class', value)
+      } else {
+        this.root.setAttribute(name, value)
+      }
     }
   }
   appendChild(component) {
@@ -50,8 +54,13 @@ export class Component {
     this.render()[RANDER_TO_DOM](range)
   }
   rerender() { // 重新绘制函数
-    this._range.deleteContents()
-    this[RANDER_TO_DOM](this._range)
+    let oldRange = this._range // 缓存range 因为[RANDER_TO_DOM]方法会重置this._range
+    let range = document.createRange()
+    range.setStart(oldRange.startContainer, oldRange.startOffset)
+    range.setEnd(oldRange.startContainer, oldRange.startOffset) // 将新range的起点放在老range的起点上
+    this[RANDER_TO_DOM](range) // 将新range插入到dom中
+    oldRange.setStart(range.endContainer, range.endOffset) // 重置老range的起点为新range的终点
+    oldRange.deleteContents() // 将原本老range的内容删除,这样就只剩新的range内容了
   }
   setState(newState) {
     if (this.state === null || typeof this.state !== 'object') { // 历史遗留问题  typeof null 为object
@@ -87,6 +96,9 @@ export function createElement(type, attributes, ...children) {
     for (let child of children) {
       if (typeof child === 'string') {
         child = new TextWrapper(child)
+      }
+      if (child === null) {
+        continue
       }
       if ((typeof child === 'object') && (child instanceof Array)) { // 判断child是否为数组 需要考虑到数组嵌套情况 所以需要递归展开
         insertChildren(child)
