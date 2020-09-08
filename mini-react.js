@@ -53,6 +53,24 @@ export class Component {
     this._range.deleteContents()
     this[RANDER_TO_DOM](this._range)
   }
+  setState(newState) {
+    if (this.state === null || typeof this.state !== 'object') { // 历史遗留问题  typeof null 为object
+      this.state = newState
+      this.rerender()
+      return
+    }
+    let merge = (oldState, newState) => { // 深拷贝合并对象
+      for (let key in newState) {
+        if (oldState[key] === null || typeof oldState[key] !== 'object') {
+          oldState[key] = newState[key]
+        } else {
+          merge(oldState[key], newState[key])
+        }
+      }
+    }
+    merge(this.state, newState)
+    this.rerender()
+  }
 }
 
 export function createElement(type, attributes, ...children) {

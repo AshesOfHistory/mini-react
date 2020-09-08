@@ -12,7 +12,7 @@ class MyComponent extends Component {
     return <div>
       <h1>this is my component</h1>
       <p>{this.state.username.toString()}</p>
-      <button onclick={ () => { this.state.age++; this.rerender() } }>add</button>
+      <button onclick={ () => { this.setState({age: this.state.age++}) } }>add</button>
       <p>{this.state.age.toString()}</p>
     </div>
   }
