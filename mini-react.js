@@ -1,18 +1,34 @@
+const RANDER_TO_DOM = Symbol("range to dom")
 class ElementWrapper {
   constructor(type) {
     this.root = document.createElement(type)
   }
   setAttribute(name, value) {
-    this.root.setAttribute(name, value)
+    if (name.match(/^on([\s\S]+)$/)) { // \s所有空白 \S所有非空白 结合在一起表示所有字符 ()匹配模式  RegExp.$1表示匹配到的值 支持on*写法,用来绑定事件
+      this.root.addEventListener(RegExp.$1.replace(/^[\s\S]/, word => word.toLowerCase()), value) // 有时为驼峰式onClick，RegExp.$1 为Click，需要确保首字母小写，事件大小写敏感
+    } else {
+      this.root.setAttribute(name, value)
+    }
   }
   appendChild(component) {
-    this.root.appendChild(component.root) // 1这边添加的是component.root
+    let range = document.createRange()
+    range.setStart(this.root, this.root.childNodes.length) // 这里起始节点必须为最后才对应添加节点
+    range.setEnd(this.root, this.root.childNodes.length)
+    component[RANDER_TO_DOM](range)
+  }
+  [RANDER_TO_DOM](range) {
+    range.deleteContents()
+    range.insertNode(this.root)
   }
 }
 
 class TextWrapper {
   constructor(content) {
     this.root = document.createTextNode(content)
+  }
+  [RANDER_TO_DOM](range) {
+    range.deleteContents()
+    range.insertNode(this.root)
   }
 }
 
@@ -21,6 +37,7 @@ export class Component {
     this.props = Object.create(null)
     this.children = []
     this._root = null // 3所以需要创建一个私有属性来获取root
+    this._range = null // 初始化range存放对象
   }
   setAttribute(name, value) {
     this.props[name] = value
@@ -28,11 +45,13 @@ export class Component {
   appendChild(component) {
     this.children.push(component) // 2这边添加的是component
   }
-  get root () { // class创建getter
-    if (!this._root) { // 单例模式 通过render函数渲染节点
-      this._root = this.render().root
-    }
-    return this._root
+  [RANDER_TO_DOM](range) { // state 状态更新之后需要重新渲染
+    this._range = range
+    this.render()[RANDER_TO_DOM](range)
+  }
+  rerender() { // 重新绘制函数
+    this._range.deleteContents()
+    this[RANDER_TO_DOM](this._range)
   }
 }
 
@@ -41,7 +60,7 @@ export function createElement(type, attributes, ...children) {
   if (typeof type === 'string') {
     element = new ElementWrapper(type)
   } else {
-    element = new type;
+    element = new type
   }
   for (let attr in attributes) {
     element.setAttribute(attr, attributes[attr])
@@ -63,5 +82,9 @@ export function createElement(type, attributes, ...children) {
 }
 
 export function render(component, parentElement) {
-  parentElement.appendChild(component.root)
+  let range = document.createRange()
+  range.setStart(parentElement, 0)
+  range.setEnd(parentElement, parentElement.childNodes.length)
+  range.deleteContents()
+  component[RANDER_TO_DOM](range)
 }
