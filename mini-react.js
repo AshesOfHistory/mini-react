@@ -1,40 +1,4 @@
 const RANDER_TO_DOM = Symbol("range to dom")
-class ElementWrapper {
-  constructor(type) {
-    this.root = document.createElement(type)
-  }
-  setAttribute(name, value) {
-    if (name.match(/^on([\s\S]+)$/)) { // \s所有空白 \S所有非空白 结合在一起表示所有字符 ()匹配模式  RegExp.$1表示匹配到的值 支持on*写法,用来绑定事件
-      this.root.addEventListener(RegExp.$1.replace(/^[\s\S]/, word => word.toLowerCase()), value) // 有时为驼峰式onClick，RegExp.$1 为Click，需要确保首字母小写，事件大小写敏感
-    } else {
-      if (name === 'className') {
-        this.root.setAttribute('class', value)
-      } else {
-        this.root.setAttribute(name, value)
-      }
-    }
-  }
-  appendChild(component) {
-    let range = document.createRange()
-    range.setStart(this.root, this.root.childNodes.length) // 这里起始节点必须为最后才对应添加节点
-    range.setEnd(this.root, this.root.childNodes.length)
-    component[RANDER_TO_DOM](range)
-  }
-  [RANDER_TO_DOM](range) {
-    range.deleteContents()
-    range.insertNode(this.root)
-  }
-}
-
-class TextWrapper {
-  constructor(content) {
-    this.root = document.createTextNode(content)
-  }
-  [RANDER_TO_DOM](range) {
-    range.deleteContents()
-    range.insertNode(this.root)
-  }
-}
 
 export class Component {
   constructor() {
@@ -42,6 +6,9 @@ export class Component {
     this.children = []
     this._root = null // 3所以需要创建一个私有属性来获取root
     this._range = null // 初始化range存放对象
+  }
+  get vdom() { // Component的内容由render决定
+    return this.render().vdom // 递归调用 若render还是Component，依旧会调用Component的vdom，直到render的是一个ElementWrapper
   }
   setAttribute(name, value) {
     this.props[name] = value
@@ -79,6 +46,61 @@ export class Component {
     }
     merge(this.state, newState)
     this.rerender()
+  }
+}
+class ElementWrapper extends Component {
+  constructor(type) {
+    super(type)
+    this.type = type
+    this.root = document.createElement(type)
+  }
+  get vdom() {
+    return {
+      type: this.type,
+      props: this.props, // 来自父类Component继承的props和children
+      children: this.children.map(child => child.vdom)
+    }
+  }
+  /*
+  setAttribute(name, value) {
+    if (name.match(/^on([\s\S]+)$/)) { // \s所有空白 \S所有非空白 结合在一起表示所有字符 ()匹配模式  RegExp.$1表示匹配到的值 支持on*写法,用来绑定事件
+      this.root.addEventListener(RegExp.$1.replace(/^[\s\S]/, word => word.toLowerCase()), value) // 有时为驼峰式onClick，RegExp.$1 为Click，需要确保首字母小写，事件大小写敏感
+    } else {
+      if (name === 'className') {
+        this.root.setAttribute('class', value)
+      } else {
+        this.root.setAttribute(name, value)
+      }
+    }
+  }
+  appendChild(component) {
+    let range = document.createRange()
+    range.setStart(this.root, this.root.childNodes.length) // 这里起始节点必须为最后才对应添加节点
+    range.setEnd(this.root, this.root.childNodes.length)
+    component[RANDER_TO_DOM](range)
+  }
+  */
+  [RANDER_TO_DOM](range) {
+    range.deleteContents()
+    range.insertNode(this.root)
+  }
+}
+
+class TextWrapper extends Component {
+  constructor(content) {
+    super(content)
+    this.content = content
+    this.root = document.createTextNode(content)
+  }
+  get vdom() {
+    return {
+      type: '#text',
+      content: this.content
+    }
+  }
+  [RANDER_TO_DOM](range) {
+    range.deleteContents()
+    range.insertNode(this.root)
   }
 }
 
