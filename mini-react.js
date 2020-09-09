@@ -52,51 +52,47 @@ class ElementWrapper extends Component {
   constructor(type) {
     super(type)
     this.type = type
-    this.root = document.createElement(type)
   }
-  get vdom() {
-    return {
-      type: this.type,
-      props: this.props, // 来自父类Component继承的props和children
-      children: this.children.map(child => child.vdom)
-    }
+  get vdom() { // 为了能够调用渲染方法，需要返回this
+    return this
   }
-  /*
-  setAttribute(name, value) {
-    if (name.match(/^on([\s\S]+)$/)) { // \s所有空白 \S所有非空白 结合在一起表示所有字符 ()匹配模式  RegExp.$1表示匹配到的值 支持on*写法,用来绑定事件
-      this.root.addEventListener(RegExp.$1.replace(/^[\s\S]/, word => word.toLowerCase()), value) // 有时为驼峰式onClick，RegExp.$1 为Click，需要确保首字母小写，事件大小写敏感
-    } else {
-      if (name === 'className') {
-        this.root.setAttribute('class', value)
+  get vchildren() { // 为了避免与父组件的children混淆 新建一个vchildren获取虚拟children
+    return this.children.map(child => child)
+  }
+  [RANDER_TO_DOM](range) { // 生成实体dom的逻辑全都在这里执行
+    range.deleteContents()
+    let root = document.createElement(this.type)
+    for (let name in this.props) { // 为dom添加属性
+      let value = this.props[name]
+      if (name.match(/^on([\s\S]+)$/)) { // \s所有空白 \S所有非空白 结合在一起表示所有字符 ()匹配模式  RegExp.$1表示匹配到的值 支持on*写法,用来绑定事件
+        root.addEventListener(RegExp.$1.replace(/^[\s\S]/, word => word.toLowerCase()), value) // 有时为驼峰式onClick，RegExp.$1 为Click，需要确保首字母小写，事件大小写敏感
       } else {
-        this.root.setAttribute(name, value)
+        if (name === 'className') {
+          root.setAttribute('class', value)
+        } else {
+          root.setAttribute(name, value)
+        }
       }
     }
-  }
-  appendChild(component) {
-    let range = document.createRange()
-    range.setStart(this.root, this.root.childNodes.length) // 这里起始节点必须为最后才对应添加节点
-    range.setEnd(this.root, this.root.childNodes.length)
-    component[RANDER_TO_DOM](range)
-  }
-  */
-  [RANDER_TO_DOM](range) {
-    range.deleteContents()
-    range.insertNode(this.root)
+    for (let child of this.children) { // 每个child实际上是个Component 
+      let childRange = document.createRange()
+      childRange.setStart(root, root.childNodes.length) // 这里起始节点必须为最后才对应添加节点
+      childRange.setEnd(root, root.childNodes.length)
+      child[RANDER_TO_DOM](childRange)
+    }
+    range.insertNode(root)
   }
 }
 
 class TextWrapper extends Component {
   constructor(content) {
     super(content)
+    this.type = '#text'
     this.content = content
     this.root = document.createTextNode(content)
   }
-  get vdom() {
-    return {
-      type: '#text',
-      content: this.content
-    }
+  get vdom() { 
+    return this
   }
   [RANDER_TO_DOM](range) {
     range.deleteContents()
